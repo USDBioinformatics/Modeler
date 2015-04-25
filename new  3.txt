@@ -1,0 +1,38 @@
+<p:selectManyMenu id="compounds" value="#{compounds.selectedList}" var="comp"  showCheckbox="true">
+                    <f:selectItems value="#{compounds.compoundList}" var="name" itemLabel="#{name.id}" itemValue="#{name}" />
+                    <p:column>
+                        <h:outputText value="#{comp.id}" />
+                    </p:column>
+
+                </p:selectManyMenu> 
+                <p:commandButton value="Reaction" actionListener="#{loader.loadReactions()}" update="selectedcomp"  icon="ui-icon-check" />      
+                <p:panelGrid columns="2" id="selectedcomp" columnClasses="label,output">
+                    <p:dataList value="#{compounds.selectedList}" var="option">
+                        <h:outputText value="#{option.id}" />
+                    </p:dataList>
+                    <p:selectManyMenu id="reactions" value="#{reactions.selectedList}" var="react"  showCheckbox="true">
+                        <f:selectItems value="#{reactions.reactionList}" var="name" itemLabel="#{name}" itemValue="#{name}" />
+                    <p:column>
+                        <h:outputText value="#{react}" />
+                    </p:column>
+                        <p:commandButton value="Create" actionListener="#{loader.createMOdel}" update="psiquicNormalDisplay"  icon="ui-icon-check" />      
+                </p:selectManyMenu> 
+                </p:panelGrid>   
+				
+<script language="javascript">
+function toggle(){
+var ele=document.getElementById("toggle");
+if(ele.style.display=="block"){
+ele.style.display="none";
+}
+else{
+ele.style.display="block";
+}
+}
+</script>
+
+<!--<p:selectOneMenu id="bmList" value="#{loader.organism}" valueChangeListener="#{loader.itemChangeListener}"   >  
+                        
+                        <f:selectItem itemLabel="Select one" itemValue="" /> 
+                        <f:selectItems value="#{loader.organismList}" var="org" itemValue="#{org}" />
+                    </p:selectOneMenu>-->

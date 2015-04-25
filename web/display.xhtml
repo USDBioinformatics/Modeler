@@ -1,0 +1,377 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!--
+Copyright 2013 University of South Dakota
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License
+is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+or implied. See the License for the specific language governing permissions and limitations under
+the License.
+-->
+<!--This class contains the information for creating the sidebar and header of the site.-->
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core">
+    <h:head>
+        <script src="JQuery/cytoscape.js"></script>
+
+        <style>
+            .graph {
+                height: 700px;
+                width: 1250px;
+                position: relative;
+                left: 0;
+                top: 0;
+                border-style:solid;
+                border-width:5px;
+            }
+        </style>
+    </h:head>
+    <h:body>
+
+        <script language="javascript">
+            function toggle() {
+                var ele = document.getElementById("toggle");
+                if (ele.style.display == "block") {
+                    ele.style.display = "block";
+                }
+                else {
+                    ele.style.display = "block";
+                }
+            }
+        </script>
+        <script type="text/javascript">
+            function start() {
+                PF('statusDialog').show();
+            }
+
+            function stop() {
+                PF('statusDialog').hide();
+            }
+        </script>
+
+        <p:ajaxStatus  style="width:16px;height:16px;">  
+            <f:facet name="start">  
+                <h:graphicImage value="./resources/image/ajax_loader_blue_32.gif" />  
+            </f:facet>  
+
+            <f:facet name="complete">  
+                <h:outputText value="" />  
+            </f:facet>  
+        </p:ajaxStatus> 
+
+        <h:form id="displayForm">
+            <p:panel id="elements">
+                <h:panelGroup>
+                    <p:outputLabel value="Keyword: " />
+                    <p:inputText id="key" value="#{loader.keyword}" />
+                    <p:outputLabel value="Organism:" for="acSimple" />
+                    <p:autoComplete id="acSimple" value="#{loader.organism}" completeMethod="#{loader.generateOrgList}" />
+                    <p:commandButton value="Go"  actionListener="#{loader.load}" ajax="false"  update="psiquicNormalDisplay" />
+                </h:panelGroup>
+            </p:panel>
+            <div id="toggle" style="display: block">
+                <p:accordionPanel activeIndex="#{tabView.index}" dynamic="true" id="graphapanel">
+                    <p:ajax event="tabChange" listener="#{modelGraph.onTabChange}"/>
+
+                    <p:tab  title="Model Graph" id="graphtab">
+                        <h:form enctype="multipart/form-data"  >
+                            <p:fileUpload fileUploadListener="#{fileUpload.handleFileUpload}" mode="advanced" dragDropSupport="false" update=":displayForm"/>
+                        </h:form>
+                        <h:panelGrid columns="2">
+                            <p:panel id="psiquicNormalDisplay">
+                                <!--<p:outputLabel  value="#{modelGraph.modeljson}"/> -->
+
+                                <p:commandButton update="psiquicNormalDisplay" value="Reset Display"/>
+                                <p:commandButton actionListener="#{loader.modify}" update="psiquicNormalDisplay" value="Update"/>
+                                <p:menuButton value="Download"     > 
+                                    <p:menuitem  title="download model" value="SBML model"   icon="ui-icon-arrowthichk-s" ajax="false" actionListener="#{fileDownload.download}"   >  
+                                        <p:fileDownload value="#{fileDownload.file}" />
+                                    </p:menuitem> 
+                                    <p:menuitem  title="download compounds" value="Compounds"   icon="ui-icon-arrowthichk-s" ajax="false" actionListener="#{fileDownload.downloadCompounds}"   >  
+                                        <p:fileDownload value="#{fileDownload.compounds}" />
+                                    </p:menuitem> 
+                                    <p:menuitem  title="download reactions" value="Reactions"   icon="ui-icon-arrowthichk-s" ajax="false" actionListener="#{fileDownload.downloadReactions}"   >  
+                                        <p:fileDownload value="#{fileDownload.reactions}" />
+                                    </p:menuitem> 
+                                </p:menuButton>
+                                <div id="psiquicNormalDiv" class="graph" ></div>
+                                <script type="text/javascript">
+                                    $(function() { // on dom ready
+
+                                        $('#psiquicNormalDiv').cytoscape({
+                                            style: cytoscape.stylesheet()
+                                                    .selector('node')
+                                                    .css({
+                                                'content': 'data(name)',
+                                                'shape': 'data(faveShape)',
+                                                'text-valign': 'center',
+                                                'color': 'white',
+                                                'text-outline-width': 2,
+                                                'text-outline-color': 'data(faveColor)',
+                                                'background-color': 'data(faveColor)'
+                                            })
+                                                    .selector('edge')
+                                                    .css({
+                                                'target-arrow-shape': 'triangle',
+                                                'source-arrow-shape': 'data(faveShape)',
+                                                'line-color': 'data(faveColor)',
+                                                'source-arrow-color': 'data(faveColor)',
+                                                'target-arrow-color': 'data(faveColor)'
+                                            })
+                                                    .selector(':selected')
+                                                    .css({
+                                                'background-color': 'black',
+                                                'line-color': 'data(faveColor)',
+                                                'target-arrow-color': 'data(faveColor)',
+                                                'source-arrow-color': 'data(faveColor)'
+                                            })
+                                                    .selector('.faded')
+                                                    .css({
+                                                'opacity': 0.25,
+                                                'text-opacity': 0
+                                            }),
+                                            elements:
+                                    #{modelGraph.modeljson}
+                                            ,
+                                            ready: function() {
+                                                window.cy = this;
+                                                // giddy up...
+
+                                                cy.elements().unselectify();
+                                                cy.on('tap', 'node', function(e) {
+                                                    var node = e.cyTarget;
+                                                    var neighborhood = node.neighborhood().add(node);
+                                                    cy.elements().addClass('faded');
+                                                    neighborhood.removeClass('faded');
+                                                });
+                                                cy.on('tap', function(e) {
+                                                    if (e.cyTarget === cy) {
+                                                        cy.elements().removeClass('faded');
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }); // on dom ready
+                                </script>
+                            </p:panel>
+                            <p:fieldset id="elementlist" legend="Elements" toggleable="true" toggleSpeed="500" > 
+                                <!-- <p:panel id="elementlist" style="">-->
+
+                                <h:panelGroup>
+                                    <p:outputLabel value="Compounds"/>
+                                    <p:selectManyMenu id="compmenu" value="#{compounds.selectedList}" var="comp"  showCheckbox="true" filter="true" filterMatchMode="contains" converter="#{compConverter}" style="width: 200px">
+                                        <f:selectItems value="#{compounds.compoundList}" var="name" itemLabel="#{name.name}" itemValue="#{name}" />
+
+                                        <p:column>
+                                            <h:outputText value="#{comp.name}" />
+                                        </p:column>
+                                    </p:selectManyMenu> 
+                                    <!-- <p:commandButton value="Add"   icon="ui-icon-check" /> -->     
+
+                                </h:panelGroup>
+                                <p:separator/>
+                                <h:panelGroup>
+                                    <p:outputLabel value="Reactions"/>
+                                    <p:selectManyMenu id="reactmenu" value="#{reactions.selectedList}" var="rxn"  showCheckbox="true" filter="true" filterMatchMode="contains" style="width: 200px" >
+                                        <f:selectItems value="#{reactions.reactionList}" var="name" itemLabel="#{name}" itemValue="#{name}" />
+
+                                        <p:column>
+                                            <h:outputText value="#{rxn}" />
+                                        </p:column>
+                                    </p:selectManyMenu> 
+                                    <!-- <p:commandButton value="Add"   icon="ui-icon-check" />  -->                                       
+                                </h:panelGroup>
+
+
+                            </p:fieldset> <!--</p:panel>-->
+                        </h:panelGrid>
+                    </p:tab>
+                    <!--
+                    <p:tab title="PSICQUIC Empty Gene Names Replaced by Short Label">
+                        <p:panel id="psiquicNullDisplay">
+                            <p:commandButton update="psiquicNullDisplay" value="Reset Display"/>
+    
+                            <div id="psiquicNullDiv" class="graph"></div>
+                            <script>
+                                        $(function() { // on dom ready
+    
+                                        $('#psiquicNullDiv').cytoscape({
+                                        style: cytoscape.stylesheet()
+                                                .selector('node')
+                                                .css({
+                                                'content': 'data(name)',
+                                                        'text-valign': 'center',
+                                                        'color': 'white',
+                                                        'text-outline-width': 2,
+                                                        'text-outline-color': '#888'
+                                                })
+                                                .selector('edge')
+                                                .css({
+                                                'target-arrow-shape': 'triangle'
+                                                })
+                                                .selector(':selected')
+                                                .css({
+                                                'background-color': 'black',
+                                                        'line-color': 'black',
+                                                        'target-arrow-color': 'black',
+                                                        'source-arrow-color': 'black'
+                                                })
+                                                .selector('.faded')
+                                                .css({
+                                                'opacity': 0.25,
+                                                        'text-opacity': 0
+                                                }),
+                                                elements: {
+                             
+                                                },
+                                                ready: function() {
+                                                window.cy = this;
+                                                        // giddy up...
+    
+                                                        cy.elements().unselectify();
+                                                        cy.on('tap', 'node', function(e) {
+                                                        var node = e.cyTarget;
+                                                                var neighborhood = node.neighborhood().add(node);
+                                                                cy.elements().addClass('faded');
+                                                                neighborhood.removeClass('faded');
+                                                        });
+                                                        cy.on('tap', function(e) {
+                                                        if (e.cyTarget === cy) {
+                                                        cy.elements().removeClass('faded');
+                                                        }
+                                                        });
+                                                }
+                                        });
+                                        }); // on dom ready
+                            </script>
+                        </p:panel>
+                    </p:tab>
+                    <p:tab title="BioGrid">
+                        <p:panel id="biogridDisplay">
+                            <p:commandButton update="biogridDisplay" value="Reset Display"/>
+    
+                            <div id="biogridDiv" class="graph"></div>
+                            <script>
+                                        $(function() { // on dom ready
+    
+                                        $('#biogridDiv').cytoscape({
+                                        style: cytoscape.stylesheet()
+                                                .selector('node')
+                                                .css({
+                                                'content': 'data(name)',
+                                                        'text-valign': 'center',
+                                                        'color': 'white',
+                                                        'text-outline-width': 2,
+                                                        'text-outline-color': '#888'
+                                                })
+                                                .selector('edge')
+                                                .css({
+                                                'target-arrow-shape': 'triangle'
+                                                })
+                                                .selector(':selected')
+                                                .css({
+                                                'background-color': 'black',
+                                                        'line-color': 'black',
+                                                        'target-arrow-color': 'black',
+                                                        'source-arrow-color': 'black'
+                                                })
+                                                .selector('.faded')
+                                                .css({
+                                                'opacity': 0.25,
+                                                        'text-opacity': 0
+                                                }),
+                                                elements: {
+                               
+                                                },
+                                                ready: function() {
+                                                window.cy = this;
+                                                        // giddy up...
+    
+                                                        cy.elements().unselectify();
+                                                        cy.on('tap', 'node', function(e) {
+                                                        var node = e.cyTarget;
+                                                                var neighborhood = node.neighborhood().add(node);
+                                                                cy.elements().addClass('faded');
+                                                                neighborhood.removeClass('faded');
+                                                        });
+                                                        cy.on('tap', function(e) {
+                                                        if (e.cyTarget === cy) {
+                                                        cy.elements().removeClass('faded');
+                                                        }
+                                                        });
+                                                }
+                                        });
+                                        }); // on dom ready
+                            </script>
+                        </p:panel>
+                    </p:tab>
+                    <p:tab id="grninferTab" title="GRNinferResults">
+                        <p:panel id="grninferDisplay">
+                            <p:commandButton update="grninferDisplay" value="Reset Display"/>
+                            <div id="grninferDiv"  class="graph"></div>
+                            <script>
+                                        $(function() { // on dom ready
+    
+                                        $('#grninferDiv').cytoscape({
+                                        style: cytoscape.stylesheet()
+                                                .selector('node')
+                                                .css({
+                                                'content': 'data(name)',
+                                                        'text-valign': 'center',
+                                                        'color': 'white',
+                                                        'text-outline-width': 2,
+                                                        'text-outline-color': '#888'
+                                                })
+                                                .selector('edge')
+                                                .css({
+                                                'target-arrow-shape': 'triangle'
+                                                })
+                                                .selector(':selected')
+                                                .css({
+                                                'background-color': 'black',
+                                                        'line-color': 'black',
+                                                        'target-arrow-color': 'black',
+                                                        'source-arrow-color': 'black'
+                                                })
+                                                .selector('.faded')
+                                                .css({
+                                                'opacity': 0.25,
+                                                        'text-opacity': 0
+                                                }),
+                                                elements: {
+                               
+                                                },
+                                                ready: function() {
+                                                window.cy = this;
+                                                        // giddy up...
+    
+                                                        cy.elements().unselectify();
+                                                        cy.on('tap', 'node', function(e) {
+                                                        var node = e.cyTarget;
+                                                                var neighborhood = node.neighborhood().add(node);
+                                                                cy.elements().addClass('faded');
+                                                                neighborhood.removeClass('faded');
+                                                        });
+                                                        cy.on('tap', function(e) {
+                                                        if (e.cyTarget === cy) {
+                                                        cy.elements().removeClass('faded');
+                                                        }
+                                                        });
+                                                }
+                                        });
+                                        }); // on dom ready
+                            </script>
+                        </p:panel>
+                    </p:tab>
+                    -->
+                </p:accordionPanel>
+            </div>
+        </h:form>
+    </h:body>
+</html>
